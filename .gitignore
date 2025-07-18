@@ -1,0 +1,13 @@
+# Dependências do Node
+node_modules/
+
+# Arquivos de log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivo de segredos da Google
+webhook-dilasoleng-6b945ac2ec0a.json
+
+# Arquivo de variáveis de ambiente
+.env
