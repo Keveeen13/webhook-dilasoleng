@@ -93,7 +93,7 @@ async function getFullLeadDetails(leadId) {
     }
 }
 
-app.post('/webhook', (req, res) => {
+app.post('/webhook-dilasoleng', (req, res) => {
     const notificationData = req.body.leads?.status?.[0] || req.body.leads?.add?.[0] || req.body.leads?.update?.[0];
     if (!notificationData || !notificationData.id) {
         return res.status(400).send('Webhook inválido ou sem ID de lead.');
