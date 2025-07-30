@@ -113,10 +113,7 @@ async function processLead(leadId) {
     processingLeads.add(leadId);
     try {
         const fullLead = await getFullLeadDetails(leadId);
-
-        if (!TARGET_STAGES.includes(fullLead.status_label)) {
-            return;
-        }
+        if (!TARGET_STAGES.includes(fullLead.status_label)) return;
 
         console.log(`>>> INICIANDO PROCESSAMENTO: Lead ID ${leadId} na etapa '${fullLead.status_label}'`);
 
@@ -136,20 +133,6 @@ async function processLead(leadId) {
             usuario_responsavel: fullLead.responsible_user_name || '',
         };
 
-        const auth = new google.auth.GoogleAuth({
-            keyFile: 'webhook-dilasoleng-6b945ac2ec0a.json',
-            scopes: 'https://www.googleapis.com/auth/spreadsheets',
-        });
-        const client = await auth.getClient();
-        const sheets = google.sheets({ version: 'v4', auth: client });
-        
-        const rangeToSearch = `${SHEET_NAME}!A:A`;
-        const searchResponse = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID, range: rangeToSearch,
-        });
-        const rows = searchResponse.data.values || [];
-        let rowIndex = rows.findIndex(row => row[0] == sheetData.id_lead) + 1;
-
         const newRowValues = [
             sheetData.id_lead,
             sheetData.nome_lead,
@@ -163,17 +146,26 @@ async function processLead(leadId) {
             ...customFieldValues
         ];
 
+        const auth = new google.auth.GoogleAuth({ keyFile: 'webhook-dilasoleng-6b945ac2ec0a.json', scopes: 'https://www.googleapis.com/auth/spreadsheets' });
+        const client = await auth.getClient();
+        const sheets = google.sheets({ version: 'v4', auth: client });
+        
+        const rangeToSearch = `${SHEET_NAME}!A:A`;
+        const searchResponse = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: rangeToSearch });
+        const rows = searchResponse.data.values || [];
+        let rowIndex = rows.findIndex(row => row[0] == sheetData.id_lead) + 1;
+
         if (rowIndex > 0) {
             console.log(`    Atualizando linha ${rowIndex} para o lead ID ${sheetData.id_lead}`);
-            await sheets.spreadsheets.values.update({
-                spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A${rowIndex}`,
-                valueInputOption: 'USER_ENTERED', resource: { values: [newRowValues] },
-            });
+            await sheets.spreadsheets.values.update({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A${rowIndex}`, valueInputOption: 'USER_ENTERED', resource: { values: [newRowValues] } });
         } else {
             console.log(`    Criando nova linha para o lead ID ${sheetData.id_lead}`);
-            await sheets.spreadsheets.values.append({
-                spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A1`,
-                valueInputOption: 'USER_ENTERED', resource: { values: [newRowValues] },
+            const nextRow = rows.length + 1;
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${SHEET_NAME}!A${nextRow}`,
+                valueInputOption: 'USER_ENTERED',
+                resource: { values: [newRowValues] },
             });
         }
         console.log(`<<< PROCESSAMENTO FINALIZADO COM SUCESSO: Lead ID ${leadId}`);
